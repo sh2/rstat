@@ -1,7 +1,7 @@
 rstat
 =====
 
-リモートホストにdstatとiostatを仕掛けます。
+複数のリモートホストでdstatとiostatを実行します。
 
 セットアップ
 ------------
@@ -31,3 +31,4 @@ Red Hat Enterprise Linux 5、6と、
 測定を終了するにはrstat\_stop.shスクリプトを起動します。引数はありません。
 
     $ ./rstat_stop.sh
+
