@@ -44,13 +44,15 @@ _EOF_
         \$| = 1;
         my \$datetime;
         
-        open(my \$iostat, 'iostat -dxk 1 |') or die \$!;
+        open(my \$iostat, 'LANG=C iostat -dxk 1 |') or die \$!;
         
         while (my \$line = <\$iostat>) {
             chomp(\$line);
             
             if (\$line =~ /^Linux/) {
                 # Title
+                print "Host,\$line\\n";
+                print "Datetime,Device,rrqm/s,wrqm/s,r/s,w/s,rkB/s,wkB/s,avgrq-sz,avgqu-sz,await,svctm,%util\\n";
             } elsif (\$line =~ /^Device:/) {
                 # Header
                 my (\$sec, \$min, \$hour, \$mday, \$mon, \$year) = localtime();
