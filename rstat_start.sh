@@ -2,8 +2,8 @@
 
 BASH_EXEC=/bin/bash
 PERL_EXEC=/usr/bin/perl
-PID_FILE=/tmp/pidfile
-PIPE_FILE=/tmp/pipefile
+PID_FILE=/tmp/rstat_pidfile
+PIPE_FILE=/tmp/rstat_pipefile
 DATETIME=`date +'%Y%m%d-%H%M%S'`
 TARGET_LIST=$@
 

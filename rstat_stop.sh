@@ -1,6 +1,6 @@
 #!/bin/bash
 
-PID_FILE=/tmp/pidfile
+PID_FILE=/tmp/rstat_pidfile
 
 if [ -f "$PID_FILE" ]; then
     while read PID
