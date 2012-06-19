@@ -4,6 +4,7 @@ BASH_EXEC=/bin/bash
 PERL_EXEC=/usr/bin/perl
 PID_FILE=/tmp/rstat_pidfile
 PIPE_FILE=/tmp/rstat_pipefile
+LOG_STDERR=rstat.err
 DATETIME=`date +'%Y%m%d-%H%M%S'`
 TARGET_LIST=$@
 
@@ -23,11 +24,13 @@ if [ -f "$PID_FILE" ]; then
     rm -f $PID_FILE
 fi
 
+rm -f $LOG_STDERR
+
 for TARGET_HOST in $TARGET_LIST
 do
     # dstat
     LOG_FILE_D=d_${DATETIME}_${TARGET_HOST}.csv
-    ssh $TARGET_HOST $BASH_EXEC <<_EOF_ >$LOG_FILE_D &
+    ssh $TARGET_HOST $BASH_EXEC <<_EOF_ >$LOG_FILE_D 2>>$LOG_STDERR &
         rm -f $PIPE_FILE
         mkfifo $PIPE_FILE
         cat $PIPE_FILE &
@@ -37,7 +40,7 @@ _EOF_
     
     # iostat
     LOG_FILE_I=i_${DATETIME}_${TARGET_HOST}.csv
-    ssh $TARGET_HOST $PERL_EXEC <<_EOF_ >$LOG_FILE_I &
+    ssh $TARGET_HOST $PERL_EXEC <<_EOF_ >$LOG_FILE_I 2>>$LOG_STDERR &
         use strict;
         use warnings;
         

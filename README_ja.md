@@ -10,7 +10,7 @@ Red Hat Enterprise Linux 5、6と、
 それらのクローンディストリビューションを対象にしています。
 ただし以下に示すiostatの不具合が修正された、5.7以上を推奨します。
 
-[Bug 604637 – extraneous newline in iostat report for long device names](https://bugzilla.redhat.com/show_bug.cgi?id=604637)
+[Bug 604637 - extraneous newline in iostat report for long device names](https://bugzilla.redhat.com/show_bug.cgi?id=604637)
 
 測定対象ホストにパスワードなしのSSHログインができる必要があります。
 この構成には通常ssh-keygenコマンドとssh-copy-idコマンドを利用します。
