@@ -3,8 +3,7 @@
 PID_FILE=/tmp/rstat_pidfile
 
 if [ -f "$PID_FILE" ]; then
-    while read PID
-    do
+    while read PID; do
         if [ "`ps -p $PID -o comm=`" = 'ssh' ]; then
             kill $PID
         fi

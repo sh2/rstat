@@ -14,8 +14,7 @@ if [ $# -lt 1 ]; then
 fi
 
 if [ -f "$PID_FILE" ]; then
-    while read PID
-    do
+    while read PID; do
         if [ "`ps -p $PID -o comm=`" = 'ssh' ]; then
             kill $PID
         fi
@@ -26,8 +25,7 @@ fi
 
 rm -f $LOG_STDERR
 
-for TARGET_HOST in $TARGET_LIST
-do
+for TARGET_HOST in $TARGET_LIST; do
     # dstat
     LOG_FILE_D=d_${DATETIME}_${TARGET_HOST}.csv
     ssh $TARGET_HOST $BASH_EXEC <<_EOF_ >$LOG_FILE_D 2>>$LOG_STDERR &
