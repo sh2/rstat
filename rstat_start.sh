@@ -43,9 +43,16 @@ _EOF_
         use warnings;
         
         \$| = 1;
-        my \$datetime;
+        my (\$header, \$datetime);
+        my (\$major, \$minor, \$patch) = \`LC_ALL=C iostat -V\` =~ /(\\d+)\\.(\\d+)\\.(\\d+)/;
         
-        open(my \$iostat, 'LANG=C iostat -dxk 1 |') or die \$!;
+        if (\$major * 10000 + \$minor * 100 + \$patch >= 90102) {
+            \$header = 'Datetime,Device,rrqm/s,wrqm/s,r/s,w/s,rkB/s,wkB/s,avgrq-sz,avgqu-sz,await,r_await,w_await,svctm,%util';
+        } else {
+            \$header = 'Datetime,Device,rrqm/s,wrqm/s,r/s,w/s,rkB/s,wkB/s,avgrq-sz,avgqu-sz,await,svctm,%util';
+        }
+        
+        open(my \$iostat, 'LC_ALL=C iostat -dxk 1 |') or die \$!;
         
         while (my \$line = <\$iostat>) {
             chomp(\$line);
@@ -53,7 +60,7 @@ _EOF_
             if (\$line =~ /^Linux/) {
                 # Title
                 print "Host,\$line\\n";
-                print "Datetime,Device,rrqm/s,wrqm/s,r/s,w/s,rkB/s,wkB/s,avgrq-sz,avgqu-sz,await,svctm,%util\\n";
+                print "\$header\\n";
             } elsif (\$line =~ /^Device:/) {
                 # Header
                 my (\$sec, \$min, \$hour, \$mday, \$mon, \$year) = localtime();
