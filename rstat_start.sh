@@ -44,7 +44,7 @@ _EOF_
         
         \$| = 1;
         my (\$header, \$datetime);
-        my (\$major, \$minor, \$patch) = \`LC_ALL=C iostat -V\` =~ /(\\d+)\\.(\\d+)\\.(\\d+)/;
+        my (\$major, \$minor, \$patch) = \`LC_ALL=C iostat -V 2>&1\` =~ /(\\d+)\\.(\\d+)\\.(\\d+)/;
         
         if (\$major * 10000 + \$minor * 100 + \$patch >= 90102) {
             \$header = 'Datetime,Device,rrqm/s,wrqm/s,r/s,w/s,rkB/s,wkB/s,avgrq-sz,avgqu-sz,await,r_await,w_await,svctm,%util';
