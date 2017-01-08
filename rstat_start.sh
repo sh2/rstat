@@ -32,7 +32,7 @@ for TARGET_HOST in $TARGET_LIST; do
         rm -f $PIPE_FILE
         mkfifo $PIPE_FILE
         cat $PIPE_FILE &
-        dstat -tvfn --output $PIPE_FILE 1 1>/dev/null 2>/dev/null
+        dstat -tfvnrl --output $PIPE_FILE 1 1>/dev/null 2>/dev/null
 _EOF_
     echo $! >> $PID_FILE
     
@@ -43,15 +43,8 @@ _EOF_
         use warnings;
         
         \$| = 1;
+        my \$header_print = 1;
         my (\$header, \$datetime);
-        my (\$major, \$minor, \$patch) = \`LC_ALL=C iostat -V 2>&1\` =~ /(\\d+)\\.(\\d+)\\.(\\d+)/;
-        
-        if (\$major * 10000 + \$minor * 100 + \$patch >= 90102) {
-            \$header = 'Datetime,Device,rrqm/s,wrqm/s,r/s,w/s,rkB/s,wkB/s,avgrq-sz,avgqu-sz,await,r_await,w_await,svctm,%util';
-        } else {
-            \$header = 'Datetime,Device,rrqm/s,wrqm/s,r/s,w/s,rkB/s,wkB/s,avgrq-sz,avgqu-sz,await,svctm,%util';
-        }
-        
         open(my \$iostat, 'LC_ALL=C iostat -dxk 1 |') or die \$!;
         
         while (my \$line = <\$iostat>) {
@@ -60,7 +53,6 @@ _EOF_
             if (\$line =~ /^Linux/) {
                 # Title
                 print "Host,\$line\\n";
-                print "\$header\\n";
             } elsif (\$line =~ /^Device:/) {
                 # Header
                 my (\$sec, \$min, \$hour, \$mday, \$mon, \$year) = localtime();
@@ -68,6 +60,15 @@ _EOF_
                 \$datetime = sprintf('%04d/%02d/%02d %02d:%02d:%02d',
                     \$year + 1900, \$mon + 1, \$mday, \$hour, \$min, \$sec);
                 
+                if (\$header_print) {
+                    if (\$line =~ /r_await/) {
+                        print "Datetime,Device,rrqm/s,wrqm/s,r/s,w/s,rkB/s,wkB/s,avgrq-sz,avgqu-sz,await,r_await,w_await,svctm,%util\\n";
+                    } else {
+                        print "Datetime,Device,rrqm/s,wrqm/s,r/s,w/s,rkB/s,wkB/s,avgrq-sz,avgqu-sz,await,svctm,%util\\n";
+                    }
+                    
+                    \$header_print = 0;
+                }
             } elsif (\$line =~ /^\\w.*\\d\$/) {
                 # Body
                 \$line =~ s/ +/,/g;
