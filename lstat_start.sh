@@ -57,12 +57,9 @@ while (my \$line = <\$iostat>) {
             \$year + 1900, \$mon + 1, \$mday, \$hour, \$min, \$sec);
         
         if (\$header_print) {
-            if (\$line =~ /r_await/) {
-                print "Datetime,Device,rrqm/s,wrqm/s,r/s,w/s,rkB/s,wkB/s,avgrq-sz,avgqu-sz,await,r_await,w_await,svctm,%util\\n";
-            } else {
-                print "Datetime,Device,rrqm/s,wrqm/s,r/s,w/s,rkB/s,wkB/s,avgrq-sz,avgqu-sz,await,svctm,%util\\n";
-            }
-            
+            my \$header = \$line;
+            \$header =~ s/[: ]+/,/g;
+            print "Datetime,\${header}\\n";
             \$header_print = 0;
         }
     } elsif (\$line =~ /^\\w.*\\d\$/) {
