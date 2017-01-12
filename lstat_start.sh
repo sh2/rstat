@@ -7,6 +7,7 @@ LOGFILE_ERR=lstat.err
 LOGFILE_D01=d_${DATETIME}_${HOSTNAME}_01.csv
 LOGFILE_D15=d_${DATETIME}_${HOSTNAME}_15.csv
 LOGFILE_I15=i_${DATETIME}_${HOSTNAME}_15.csv
+LOGFILE_P60=p_${DATETIME}_${HOSTNAME}_60.csv
 
 if [ -f "$PIDFILE" ]; then
     while read PID; do
@@ -67,6 +68,62 @@ while (my \$line = <\$iostat>) {
         my \$body = \$line;
         \$body =~ s/ +/,/g;
         print "\${datetime},\${body}\\n";
+    }
+}
+_EOF_
+
+echo $! >>$PIDFILE
+
+# pidstat 60
+perl <<_EOF_ >$LOGFILE_P60 2>>$LOGFILE_ERR &
+#!/usr/bin/perl
+
+use strict;
+use warnings;
+
+\$| = 1;
+my \$header_print = 1;
+my \$ncols;
+open(my \$pidstat, 'LC_ALL=C pidstat -hlurdw -p ALL 60 |') or die \$!;
+
+\$SIG{'TERM'} = sub {
+    close(\$pidstat);
+    exit(0);
+};
+
+while (my \$line = <\$pidstat>) {
+    chomp(\$line);
+    
+    if (\$line =~ /^Linux/) {
+        # Title
+        print "Host,\${line}\\n";
+    } elsif (\$line =~ /^#/) {
+        # Header
+        if (\$header_print) {
+            my \$header = \$line;
+            \$header =~ s/[# ]+/,/g;
+            print "Datetime\${header}\\n";
+            \$header_print = 0;
+            
+            if (\$line =~ /UID/) {
+                # RHEL 7
+                \$ncols = 17;
+            } else {
+                # RHEL 6
+                \$ncols = 16;
+            }
+        }
+    } elsif (\$line =~ /^ *\\d/) {
+        # Body
+        my \$body = \$line;
+        \$body =~ s/^ +//;
+        my @cols = split(/ +/, \$body);
+        my (\$sec, \$min, \$hour, \$mday, \$mon, \$year) = localtime(\$cols[0]);
+        my \$datetime = sprintf('%04d/%02d/%02d %02d:%02d:%02d',
+            \$year + 1900, \$mon + 1, \$mday, \$hour, \$min, \$sec);
+        my \$stats = join(',', @cols[0..\$ncols]);
+        my \$command = join(' ', @cols[\$ncols + 1..\$#cols]);
+        print "\${datetime},\${stats},\${command}\\n";
     }
 }
 _EOF_
