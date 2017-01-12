@@ -48,7 +48,7 @@ while (my \$line = <\$iostat>) {
     
     if (\$line =~ /^Linux/) {
         # Title
-        print "Host,\$line\\n";
+        print "Host,\${line}\\n";
     } elsif (\$line =~ /^Device:/) {
         # Header
         my (\$sec, \$min, \$hour, \$mday, \$mon, \$year) = localtime();
@@ -64,8 +64,9 @@ while (my \$line = <\$iostat>) {
         }
     } elsif (\$line =~ /^\\w.*\\d\$/) {
         # Body
-        \$line =~ s/ +/,/g;
-        print "\${datetime},\${line}\\n";
+        my \$body = \$line;
+        \$body =~ s/ +/,/g;
+        print "\${datetime},\${body}\\n";
     }
 }
 _EOF_
