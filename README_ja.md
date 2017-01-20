@@ -1,34 +1,48 @@
-rstat
-=====
+rstat/lstat
+===========
 
-複数のリモートホストでdstatとiostatを実行します。
+rstatは複数のリモートホストでdstat、iostatとpidstatを実行し、ログファイルをCSV形式で出力するツールです。
+lstatは同じ処理を自ホストのみで実行します。各コマンドは以下のオプションで起動されます。
+
+    $ dstat -tfvnrl 1
+    $ dstat -tfvnrl 15
+    $ iostat -dxk 15
+    $ pidstat -hlurdw -p ALL 60
 
 セットアップ
 ------------
 
-Red Hat Enterprise Linux 5、6と、
-それらのクローンディストリビューションを対象にしています。
-ただし以下に示すiostatの不具合が修正された、5.7以上を推奨します。
+本ツールは、Red Hat Enterprise Linux 6/7と
+それらのクローンディストリビューションを対象としています。
 
-[Bug 604637 - extraneous newline in iostat report for long device names](https://bugzilla.redhat.com/show_bug.cgi?id=604637)
+まず、測定対象ホストにsysstatとdstatがインストールされている必要があります。
 
-測定対象ホストにパスワードなしのSSHログインができる必要があります。
-この構成には通常ssh-keygenコマンドとssh-copy-idコマンドを利用します。
-現在ログインしているホストが測定対象の場合には、
-自分自身にもパスワードなしのSSHログインができる必要があります。
+    # yum install sysstat dstat
 
-測定対象ホストにdstatとsysstatパッケージが
-インストールされている必要があります。
-測定対象ホストに本ツールのスクリプトを配置する必要は、ありません。
+次に、rstatを実行するには測定対象ホストにパスワードなしのSSHログインができる必要があります。
+これを構成するには、通常ssh-keygenコマンドとssh-copy-idコマンドを用います。
+現在ログインしている自ホストが測定対象に含まれている場合は、
+自ホストにもパスワードなしのSSHログインができる必要があります。
+
+lstatの方は、SSHログインを必要としません。
+
+最後に、現在ログインしている自ホストに各スクリプトを配置してください。
+自ホスト以外の測定対象ホストにスクリプトを配置する必要は、ありません。
 
 使い方
 ------
 
-ホスト名を引数としてrstat\_start.shスクリプトを起動し、測定を開始します。カレントディレクトリにd\_で始まるdstatのログファイルと、i\_で始まるiostatのログファイルが蓄積されます。
+測定対象ホストを引数としてrstat\_start.shスクリプトを実行すると、測定が開始されます。
+カレントディレクトリにd\_で始まるdstatのログファイル、i\_で始まるiostatのログファイルと
+p\_で始まるpidstatのログファイルが出力されます。
 
     $ ./rstat_start.sh host1 host2 ...
 
-測定を終了するにはrstat\_stop.shスクリプトを起動します。引数はありません。
+測定を終了するには、同じディレクトリでrstat\_stop.shスクリプトを実行します。
+引数はありません。
 
     $ ./rstat_stop.sh
+
+lstatも使い方は同じです。
+lstat\_start.shは自ホストのみを対象とするため、指定する引数はありません。
 
