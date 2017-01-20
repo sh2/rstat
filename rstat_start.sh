@@ -1,83 +1,143 @@
 #!/bin/bash
 
-BASH_EXEC=/bin/bash
-PERL_EXEC=/usr/bin/perl
-PID_FILE=/tmp/rstat_pidfile
-PIPE_FILE=/tmp/rstat_pipefile
-LOG_STDERR=rstat.err
-DATETIME=`date +'%Y%m%d-%H%M%S'`
+DATETIME=$(date +'%Y%m%d-%H%M%S')
 TARGET_LIST=$@
+PIDFILE=rstat.pid
+LOGFILE_ERR=rstat.err
 
-if [ $# -lt 1 ]; then
+if [ "$#" -lt 1 ]; then
     echo 'Usage: ./rstat_start.sh host1 host2 ...'
     exit 1
 fi
 
-if [ -f "$PID_FILE" ]; then
+if [ -f "$PIDFILE" ]; then
     while read PID; do
-        if [ "`ps -p $PID -o comm=`" = 'ssh' ]; then
+        if [ "$(ps -p $PID -o comm=)" = 'ssh' ]; then
             kill $PID
         fi
-    done < $PID_FILE
+    done < $PIDFILE
     
-    rm -f $PID_FILE
+    rm -f $PIDFILE
 fi
 
-rm -f $LOG_STDERR
-
-for TARGET_HOST in $TARGET_LIST; do
-    # dstat
-    LOG_FILE_D=d_${DATETIME}_${TARGET_HOST}.csv
-    ssh $TARGET_HOST $BASH_EXEC <<_EOF_ >$LOG_FILE_D 2>>$LOG_STDERR &
-        rm -f $PIPE_FILE
-        mkfifo $PIPE_FILE
-        cat $PIPE_FILE &
-        dstat -tfvnrl --output $PIPE_FILE 1 1>/dev/null 2>/dev/null
+for TARGET in $TARGET_LIST; do
+    # dstat 1
+    LOGFILE_D01=d_${DATETIME}_${TARGET}_01.csv
+    ssh $TARGET bash <<_EOF_ >$LOGFILE_D01 2>>$LOGFILE_ERR &
+rm -f rstat_d01.pipe
+mkfifo rstat_d01.pipe
+cat rstat_d01.pipe &
+dstat -tfvnrl --output rstat_d01.pipe 1 1>/dev/null 2>/dev/null
 _EOF_
-    echo $! >> $PID_FILE
+    echo $! >>$PIDFILE
     
-    # iostat
-    LOG_FILE_I=i_${DATETIME}_${TARGET_HOST}.csv
-    ssh $TARGET_HOST $PERL_EXEC <<_EOF_ >$LOG_FILE_I 2>>$LOG_STDERR &
-        use strict;
-        use warnings;
+    # dstat 15
+    LOGFILE_D15=d_${DATETIME}_${TARGET}_15.csv
+    ssh $TARGET bash <<_EOF_ >$LOGFILE_D15 2>>$LOGFILE_ERR &
+rm -f rstat_d15.pipe
+mkfifo rstat_d15.pipe
+cat rstat_d15.pipe &
+dstat -tfvnrl --output rstat_d15.pipe 15 1>/dev/null 2>/dev/null
+_EOF_
+    echo $! >>$PIDFILE
+    
+    # iostat 15
+    LOGFILE_I15=i_${DATETIME}_${TARGET}_15.csv
+    ssh $TARGET perl <<_EOF_ >$LOGFILE_I15 2>>$LOGFILE_ERR &
+use strict;
+use warnings;
+
+\$| = 1;
+my \$header_print = 1;
+my \$datetime;
+open(my \$iostat, 'LC_ALL=C iostat -dxk 15 |') or die \$!;
+
+\$SIG{'TERM'} = sub {
+    close(\$iostat);
+    exit(0);
+};
+
+while (my \$line = <\$iostat>) {
+    chomp(\$line);
+    
+    if (\$line =~ /^Linux/) {
+        # Title
+        print "Host,\${line}\\n";
+    } elsif (\$line =~ /^Device:/) {
+        # Header
+        my (\$sec, \$min, \$hour, \$mday, \$mon, \$year) = localtime();
         
-        \$| = 1;
-        my \$header_print = 1;
-        my (\$header, \$datetime);
-        open(my \$iostat, 'LC_ALL=C iostat -dxk 1 |') or die \$!;
+        \$datetime = sprintf('%04d/%02d/%02d %02d:%02d:%02d',
+            \$year + 1900, \$mon + 1, \$mday, \$hour, \$min, \$sec);
         
-        while (my \$line = <\$iostat>) {
-            chomp(\$line);
+        if (\$header_print) {
+            my \$header = \$line;
+            \$header =~ s/[: ]+/,/g;
+            print "Datetime,\${header}\\n";
+            \$header_print = 0;
+        }
+    } elsif (\$line =~ /^\\w.*\\d\$/) {
+        # Body
+        my \$body = \$line;
+        \$body =~ s/ +/,/g;
+        print "\${datetime},\${body}\\n";
+    }
+}
+_EOF_
+    echo $! >>$PIDFILE
+    
+    # pidstat 60
+    LOGFILE_P60=p_${DATETIME}_${TARGET}_60.csv
+    ssh $TARGET perl <<_EOF_ >$LOGFILE_P60 2>>$LOGFILE_ERR &
+use strict;
+use warnings;
+
+\$| = 1;
+my \$header_print = 1;
+my \$ncols;
+open(my \$pidstat, 'LC_ALL=C pidstat -hlurdw -p ALL 60 |') or die \$!;
+
+\$SIG{'TERM'} = sub {
+    close(\$pidstat);
+    exit(0);
+};
+
+while (my \$line = <\$pidstat>) {
+    chomp(\$line);
+    
+    if (\$line =~ /^Linux/) {
+        # Title
+        print "Host,\${line}\\n";
+    } elsif (\$line =~ /^#/) {
+        # Header
+        if (\$header_print) {
+            my \$header = \$line;
+            \$header =~ s/[# ]+/,/g;
+            print "Datetime\${header}\\n";
+            \$header_print = 0;
             
-            if (\$line =~ /^Linux/) {
-                # Title
-                print "Host,\$line\\n";
-            } elsif (\$line =~ /^Device:/) {
-                # Header
-                my (\$sec, \$min, \$hour, \$mday, \$mon, \$year) = localtime();
-                
-                \$datetime = sprintf('%04d/%02d/%02d %02d:%02d:%02d',
-                    \$year + 1900, \$mon + 1, \$mday, \$hour, \$min, \$sec);
-                
-                if (\$header_print) {
-                    if (\$line =~ /r_await/) {
-                        print "Datetime,Device,rrqm/s,wrqm/s,r/s,w/s,rkB/s,wkB/s,avgrq-sz,avgqu-sz,await,r_await,w_await,svctm,%util\\n";
-                    } else {
-                        print "Datetime,Device,rrqm/s,wrqm/s,r/s,w/s,rkB/s,wkB/s,avgrq-sz,avgqu-sz,await,svctm,%util\\n";
-                    }
-                    
-                    \$header_print = 0;
-                }
-            } elsif (\$line =~ /^\\w.*\\d\$/) {
-                # Body
-                \$line =~ s/ +/,/g;
-                print "\${datetime},\${line}\\n";
+            if (\$line =~ /UID/) {
+                # RHEL 7
+                \$ncols = 17;
+            } else {
+                # RHEL 6
+                \$ncols = 16;
             }
         }
-        
-        close(\$iostat);
+    } elsif (\$line =~ /^ *\\d/) {
+        # Body
+        my \$body = \$line;
+        \$body =~ s/^ +//;
+        my @cols = split(/ +/, \$body);
+        my (\$sec, \$min, \$hour, \$mday, \$mon, \$year) = localtime(\$cols[0]);
+        my \$datetime = sprintf('%04d/%02d/%02d %02d:%02d:%02d',
+            \$year + 1900, \$mon + 1, \$mday, \$hour, \$min, \$sec);
+        my \$stats = join(',', @cols[0..\$ncols]);
+        my \$command = join(' ', @cols[\$ncols + 1..\$#cols]);
+        print "\${datetime},\${stats},\${command}\\n";
+    }
+}
 _EOF_
-    echo $! >> $PID_FILE
+    echo $! >>$PIDFILE
 done
 

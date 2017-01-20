@@ -1,10 +1,10 @@
 #!/bin/bash
 
-PID_FILE=/tmp/rstat_pidfile
+PID_FILE=rstat.pid
 
 if [ -f "$PID_FILE" ]; then
     while read PID; do
-        if [ "`ps -p $PID -o comm=`" = 'ssh' ]; then
+        if [ "$(ps -p $PID -o comm=)" = 'ssh' ]; then
             kill $PID
         fi
     done < $PID_FILE
