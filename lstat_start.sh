@@ -76,8 +76,6 @@ echo $! >>$PIDFILE
 
 # pidstat 60
 perl <<_EOF_ >$LOGFILE_P60 2>>$LOGFILE_ERR &
-#!/usr/bin/perl
-
 use strict;
 use warnings;
 
