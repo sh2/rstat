@@ -39,7 +39,7 @@ and log files of pidstat starting with p\_ in the current directory.
     $ ./rstat_start.sh host1 host2 ...
 
 To end the measurement, execute the rstat\_stop.sh script in the same directory.
-There is no argument.
+There are no arguments.
 
     $ ./rstat_stop.sh
 
